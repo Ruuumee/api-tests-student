@@ -1,32 +1,34 @@
 package advertisementSearch
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
-
-	"api-tests-template/internal/assertions"
-	advertisements "api-tests-template/internal/managers/advertisements"
-	"api-tests-template/internal/managers/auth"
-	authModels "api-tests-template/internal/managers/auth/models"
-	"api-tests-template/internal/utils"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	"api-tests-template/internal/assertions"
+	"api-tests-template/internal/managers/advertisements"
+	"api-tests-template/internal/managers/auth"
+	authModels "api-tests-template/internal/managers/auth/models"
+	"api-tests-template/internal/utils"
+
 	base "api-tests-template/tests"
 )
 
-const (
-	existingAdTitle = "кирпич" // полное название вашего объявления
-	searchBeginning = "кир"    // подстрока из начала
-	searchMiddle    = "рпи"    // подстрока из середины
-	searchEnd       = "пич"    // подстрока из конца
-)
+const partLength = 5
 
 type TestSuite struct {
 	suite.Suite
-	loginData authModels.LoginOkResponse
+	loginData       authModels.LoginOkResponse
+	fixture         advertisements.Fixture
+	existingAdTitle string
+	searchBeginning string
+	searchMiddle    string
+	searchEnd       string
 }
 
 func TestSuiteRun(t *testing.T) {
@@ -34,52 +36,64 @@ func TestSuiteRun(t *testing.T) {
 }
 
 func (s *TestSuite) SetupSuite() {
+	time.Sleep(500 * time.Millisecond)
 	base.SetupSuite()
-	base.Precondition("Проверяем, что константы заданы и выполняем авторизацию")
 
-	require.NotEmpty(s.T(), existingAdTitle, "задайте existingAdTitle")
-	require.NotEmpty(s.T(), searchBeginning, "задайте searchBeginning")
-	require.NotEmpty(s.T(), searchMiddle, "задайте searchMiddle")
-	require.NotEmpty(s.T(), searchEnd, "задайте searchEnd")
-
+	base.Precondition("Авторизация пользователя с кредами из переменных окружения")
 	s.loginData = auth.Login(s.T(), os.Getenv("TEST_LOGIN"), os.Getenv("TEST_PASSWORD"))
+
+	base.Precondition("Создаем объявление со случайным названием из трёх частей")
+	s.searchBeginning = utils.RandomString(partLength)
+	s.searchMiddle = utils.RandomString(partLength)
+	s.searchEnd = utils.RandomString(partLength)
+
+	request := advertisements.NewAdvertisementRequest()
+	request.Title = s.searchBeginning + s.searchMiddle + s.searchEnd
+	s.existingAdTitle = s.fixture.CreateAdvertisement(s.T(), s.loginData.Token, request).Title
+	require.NotEmpty(s.T(), s.existingAdTitle, "Название созданного объявления пустое")
 }
 
 func (s *TestSuite) TearDownSuite() {
+	s.fixture.Cleanup(s.T())
 	base.TearDownSuite()
 }
 
-// Шаг 3
+// Positive: поиск по подстроке из середины названия находит наше объявление
 func (s *TestSuite) TestSearchByTitle() {
-	list := advertisements.GetAdvertisementsList(s.T(), s.loginData.Token, searchMiddle)
+	base.Step(fmt.Sprintf("Ищем объявления по подстроке %s", s.searchMiddle))
+	list := advertisements.GetAdvertisementsList(s.T(), s.loginData.Token, s.searchMiddle)
 
 	s.Run("В ответе есть хотя бы одно объявление", func() {
 		require.NotEmpty(s.T(), list.Items)
 	})
 
 	s.Run("Среди найденных есть наше объявление", func() {
-		assertions.ContainsAdvertisementByTitle(s.T(), list.Items, existingAdTitle)
+		assertions.ContainsAdvertisementByTitle(s.T(), list.Items, s.existingAdTitle)
 	})
 }
 
-// Шаг 4
-func (s *TestSuite) TestSearchByTitle_Substring() {
+// Positive: поиск находит объявление по подстроке в начале, середине, конце названия и в разных регистрах
+func (s *TestSuite) TestSearchByTitleSubstring() {
 	cases := []struct {
 		name   string
 		search string
 	}{
-		{"начало", searchBeginning},
-		{"середина", searchMiddle},
-		{"конец", searchEnd},
-		{"нижний регистр", strings.ToLower(searchMiddle)},
-		{"верхний регистр", strings.ToUpper(searchMiddle)},
-		{"смешанный регистр", utils.MixCase(searchMiddle)},
+		{"начало", s.searchBeginning},
+		{"середина", s.searchMiddle},
+		{"конец", s.searchEnd},
+		{"нижний регистр", strings.ToLower(s.searchMiddle)},
+		{"верхний регистр", strings.ToUpper(s.searchMiddle)},
+		{"смешанный регистр", utils.MixCase(s.searchMiddle)},
 	}
 
 	for _, tc := range cases {
 		s.Run(tc.name, func() {
+			time.Sleep(200 * time.Millisecond)
+			base.Step(fmt.Sprintf("Ищем объявления по подстроке %s (%s)", tc.search, tc.name))
 			list := advertisements.GetAdvertisementsList(s.T(), s.loginData.Token, tc.search)
-			assertions.ContainsAdvertisementByTitle(s.T(), list.Items, existingAdTitle)
+
+			base.Check("Наше объявление есть в результатах поиска")
+			assertions.ContainsAdvertisementByTitle(s.T(), list.Items, s.existingAdTitle)
 		})
 	}
 }

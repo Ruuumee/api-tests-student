@@ -26,3 +26,11 @@ type AdvertisementsList struct {
 	NextCursor string          `json:"next_cursor"`
 	Total      int             `json:"total"`
 }
+
+type CreateAdvertisementRequest struct {
+	Title       string
+	Description string
+	Price       float64
+	Quantity    int
+	PhotosCount int
+}
