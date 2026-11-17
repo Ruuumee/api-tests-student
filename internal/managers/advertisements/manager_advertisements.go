@@ -15,13 +15,12 @@ import (
 
 const (
 	DefaultDescription = "Объявление про что-то и то-то"
-	DefaultPrice = 1730.29
-	DefaultQuantity = 3
+	DefaultPrice       = 1730.29
+	DefaultQuantity    = 3
 	DefaultPhotosCount = 1
-	titlePrefix       = "AutotestAvito_QA-"
-	titleRandomLength = 10
+	titlePrefix        = "AutotestAvito_QA-"
+	titleRandomLength  = 10
 )
-
 
 func NewAdvertisementRequest() models.CreateAdvertisementRequest {
 	return models.CreateAdvertisementRequest{

@@ -12,7 +12,7 @@ import (
 
 const (
 	UnauthorizedErrorCode = "unauthorized"
-	priceDelta = 0.001
+	priceDelta            = 0.001
 )
 
 func ContainsAdvertisementByTitle(t *testing.T, items []models.Advertisement, title string) {

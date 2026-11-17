@@ -14,7 +14,6 @@ type createdAdvertisement struct {
 	id    string
 }
 
-
 type Fixture struct {
 	created []createdAdvertisement
 }
