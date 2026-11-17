@@ -13,7 +13,7 @@ import (
 	"api-tests-template/internal/utils"
 )
 
-//константы для создания нового обьявляния
+// константы для создания нового обьявляния
 const (
 	DefaultDescription = "Объявление про что-то и то-то"
 	DefaultPrice       = 1730.29
