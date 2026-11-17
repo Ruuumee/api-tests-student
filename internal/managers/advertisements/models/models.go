@@ -27,6 +27,7 @@ type AdvertisementsList struct {
 	Total      int             `json:"total"`
 }
 
+// CreateAdvertisementRequest параметры формы создания объявления
 type CreateAdvertisementRequest struct {
 	Title       string
 	Description string

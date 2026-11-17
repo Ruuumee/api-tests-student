@@ -24,6 +24,8 @@ import (
 
 const incorrectToken = "incorrect_token"
 
+// TestSuite - набор тестов для функционала "Избранное"
+// Содержит двух пользователей: покупателя и продавца, а также фикстуру для управления объявлениями
 type TestSuite struct {
 	suite.Suite
 	buyer   authModels.LoginOkResponse
@@ -31,10 +33,12 @@ type TestSuite struct {
 	fixture advertisements.Fixture
 }
 
+// TestSuiteRun - точка входа для запуска всех тестов в этом файле
 func TestSuiteRun(t *testing.T) {
 	suite.Run(t, &TestSuite{})
 }
 
+// Инициализирует тестовое окружение и создает двух пользователей
 func (s *TestSuite) SetupSuite() {
 	time.Sleep(1 * time.Second)
 	base.SetupSuite()
@@ -46,10 +50,12 @@ func (s *TestSuite) SetupSuite() {
 	s.seller = auth.RegisterRandomUser(s.T())
 }
 
+// Очищает все объявления, созданные в рамках текущего теста
 func (s *TestSuite) TearDownTest() {
 	s.fixture.Cleanup(s.T())
 }
 
+// Выполняет финальную очистку тестового окружения
 func (s *TestSuite) TearDownSuite() {
 	base.TearDownSuite()
 }

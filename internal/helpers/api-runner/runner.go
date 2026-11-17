@@ -14,6 +14,7 @@ const (
 	defaultUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
 )
 
+// New создает новый экземпляр конфигуратора ApiTest.
 type ApiTest struct {
 	token     string
 	userAgent string
@@ -37,6 +38,7 @@ func (at *ApiTest) Auth(token string) *ApiTest {
 	return at
 }
 
+// Create инициализирует и настраивает экземпляр apitest.APITest для выполнения реального HTTP-запроса.
 func (at *ApiTest) Create() *apitest.APITest {
 	apitestNew := apitest.New().EnableNetworking()
 	if os.Getenv("DEBUG") == "true" {
@@ -56,6 +58,8 @@ func (at *ApiTest) Create() *apitest.APITest {
 		})
 }
 
+// mergeServiceUrls безопасно объединяет базовый URL
+// с относительным путем конкретного запроса.
 func mergeServiceUrls(host string, r *url.URL) error {
 	if host == "" {
 		return fmt.Errorf("API_URL не задан: проверьте переменные окружения")

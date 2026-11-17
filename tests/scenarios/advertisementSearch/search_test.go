@@ -21,6 +21,7 @@ import (
 
 const partLength = 5
 
+// TestSuite - набор тестов для функционала поиска объявлений по названию.
 type TestSuite struct {
 	suite.Suite
 	loginData       authModels.LoginOkResponse
@@ -31,10 +32,12 @@ type TestSuite struct {
 	searchEnd       string
 }
 
+// точка входа для запуска всех тестов поиска объявлений в этом файле.
 func TestSuiteRun(t *testing.T) {
 	suite.Run(t, &TestSuite{})
 }
 
+// Инициализирует окружение, авторизует пользователя и создает эталонное объявление со случайным названием.
 func (s *TestSuite) SetupSuite() {
 	time.Sleep(500 * time.Millisecond)
 	base.SetupSuite()
@@ -53,6 +56,7 @@ func (s *TestSuite) SetupSuite() {
 	require.NotEmpty(s.T(), s.existingAdTitle, "Название созданного объявления пустое")
 }
 
+// Помогает удалить все созданные объявления
 func (s *TestSuite) TearDownSuite() {
 	s.fixture.Cleanup(s.T())
 	base.TearDownSuite()

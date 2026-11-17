@@ -10,6 +10,7 @@ import (
 
 const testImageSize = 10
 
+// GeneratePNG возвращает байты небольшого валидного PNG-изображения для загрузки фотографии в объявление
 func GeneratePNG() []byte {
 	img := image.NewRGBA(image.Rect(0, 0, testImageSize, testImageSize))
 	for x := 0; x < testImageSize; x++ {

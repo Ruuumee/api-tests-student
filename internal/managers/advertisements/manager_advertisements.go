@@ -13,6 +13,7 @@ import (
 	"api-tests-template/internal/utils"
 )
 
+//константы для создания нового обьявляния
 const (
 	DefaultDescription = "Объявление про что-то и то-то"
 	DefaultPrice       = 1730.29
@@ -22,6 +23,7 @@ const (
 	titleRandomLength  = 10
 )
 
+// NewAdvertisementRequest возвращает корректный запрос на создание объявления со всеми параметрами и уникальным названием
 func NewAdvertisementRequest() models.CreateAdvertisementRequest {
 	return models.CreateAdvertisementRequest{
 		Title:       titlePrefix + utils.RandomString(titleRandomLength),

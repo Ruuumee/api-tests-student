@@ -25,16 +25,19 @@ const (
 	incorrectToken = "incorrect_token"
 )
 
+// набор тестов для функционала создания объявлений.
 type TestSuite struct {
 	suite.Suite
 	loginData authModels.LoginOkResponse
 	fixture   advertisements.Fixture
 }
 
+// точка входа для запуска всех тестов создания объявлений в этом файле.
 func TestSuiteRun(t *testing.T) {
 	suite.Run(t, &TestSuite{})
 }
 
+// Инициализирует окружение, авторизует пользователя
 func (s *TestSuite) SetupSuite() {
 	base.SetupSuite()
 
@@ -42,10 +45,12 @@ func (s *TestSuite) SetupSuite() {
 	s.loginData = auth.Login(s.T(), os.Getenv("TEST_LOGIN"), os.Getenv("TEST_PASSWORD"))
 }
 
+// Выполняется после каждого теста для изоляции даанных
 func (s *TestSuite) TearDownTest() {
 	s.fixture.Cleanup(s.T())
 }
 
+// Выполняет финальную глобальную очистку окружения.
 func (s *TestSuite) TearDownSuite() {
 	base.TearDownSuite()
 }

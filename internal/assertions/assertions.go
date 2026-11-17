@@ -11,10 +11,12 @@ import (
 )
 
 const (
+	// UnauthorizedErrorCode значение поля error в ответе 401
 	UnauthorizedErrorCode = "unauthorized"
 	priceDelta            = 0.001
 )
 
+// ContainsAdvertisementByTitle проверяет, что в списке есть объявление с указанным названием
 func ContainsAdvertisementByTitle(t *testing.T, items []models.Advertisement, title string) {
 	for _, item := range items {
 		if item.Title == title {
@@ -24,6 +26,7 @@ func ContainsAdvertisementByTitle(t *testing.T, items []models.Advertisement, ti
 	require.Fail(t, "Объявление не найдено в списке", "Искали заголовок: '%s', но его нет в ответе", title)
 }
 
+// AdvertisementMatchesRequest проверяет, что объявление содержит параметры, переданные при создании
 func AdvertisementMatchesRequest(t *testing.T, ad models.Advertisement, request models.CreateAdvertisementRequest, ownerID string) {
 	require.Equal(t, request.Title, ad.Title, "title не совпадает с переданным при создании")
 	require.Equal(t, request.Description, ad.Description, "description не совпадает с переданным при создании")
@@ -56,6 +59,7 @@ func FavoritesNotContainAdvertisement(t *testing.T, items []favoriteModels.Favor
 		"Объявление %s не должно быть в избранном, но оно есть в ответе", adID)
 }
 
+// hasFavorite возвращает true, если среди избранного есть объявление с указанным ID
 func hasFavorite(items []favoriteModels.Favorite, adID string) bool {
 	for _, item := range items {
 		if item.Advertisement.ID == adID {
