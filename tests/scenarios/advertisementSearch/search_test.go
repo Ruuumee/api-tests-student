@@ -10,6 +10,7 @@ import (
 	"api-tests-template/internal/managers/auth"
 	authModels "api-tests-template/internal/managers/auth/models"
 	"api-tests-template/internal/utils"
+
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -48,20 +49,20 @@ func (s *TestSuite) TearDownSuite() {
 	base.TearDownSuite()
 }
 
-//Шаг 3
+// Шаг 3
 func (s *TestSuite) TestSearchByTitle() {
 	list := advertisements.GetAdvertisementsList(s.T(), s.loginData.Token, searchMiddle)
 
 	s.Run("В ответе есть хотя бы одно объявление", func() {
 		require.NotEmpty(s.T(), list.Items)
 	})
-	
+
 	s.Run("Среди найденных есть наше объявление", func() {
 		assertions.ContainsAdvertisementByTitle(s.T(), list.Items, existingAdTitle)
 	})
 }
 
-//Шаг 4
+// Шаг 4
 func (s *TestSuite) TestSearchByTitle_Substring() {
 	cases := []struct {
 		name   string

@@ -21,8 +21,8 @@ type Advertisement struct {
 }
 
 type AdvertisementsList struct {
-	Items []Advertisement `json:"items"`
-	HasNext    bool   `json:"has_next"`
-	NextCursor string `json:"next_cursor"`
-	Total      int    `json:"total"`
+	Items      []Advertisement `json:"items"`
+	HasNext    bool            `json:"has_next"`
+	NextCursor string          `json:"next_cursor"`
+	Total      int             `json:"total"`
 }
