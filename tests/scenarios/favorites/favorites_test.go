@@ -182,8 +182,8 @@ func (s *TestSuite) TestFavoritesUnauthorized() {
 		value       string
 		wantMessage string
 	}{
-		{"без токена", "", assertions.MissingTokenMessage},
-		{"неверный токен", incorrectToken, assertions.InvalidTokenMessage},
+		{"без токена", "", assertions.MissingAuthMessage},
+		{"неверный токен", incorrectToken, assertions.InvalidAuthMessage},
 	}
 
 	for _, operation := range operations {

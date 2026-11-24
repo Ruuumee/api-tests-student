@@ -15,10 +15,10 @@ import (
 const (
 	// UnauthorizedErrorCode значение поля error в ответе 401
 	UnauthorizedErrorCode = "unauthorized"
-	// MissingTokenMessage значение поля message в ответе 401, если токен не передан
-	MissingTokenMessage = "Authorization header required"
-	// InvalidTokenMessage значение поля message в ответе 401, если токен неверный
-	InvalidTokenMessage = "Invalid or expired token"
+	// MissingAuthMessage значение поля message в ответе 401, если токен не передан
+	MissingAuthMessage = "Authorization header required"
+	// InvalidAuthMessage значение поля message в ответе 401, если токен неверный
+	InvalidAuthMessage = "Invalid or expired token"
 	// InvalidRequestErrorCode значение поля error в ответе 400
 	InvalidRequestErrorCode = "invalid_request"
 	// NotFoundErrorCode значение поля error в ответе 404
