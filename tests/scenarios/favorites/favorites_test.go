@@ -22,7 +22,18 @@ import (
 	base "api-tests-template/tests"
 )
 
-const incorrectToken = "incorrect_token"
+const (
+	incorrectToken = "incorrect_token"
+	// файл лежит в папке photos рядом с тестом
+	validPhotoPath = "photos/valid.png"
+
+	// ожидаемые тексты message в ответах с ошибками
+	advertisementNotFoundMessage = "Advertisement not found"
+	favoriteNotFoundMessage      = "Favorite entry not found"
+	alreadyInFavoritesMessage    = "Advertisement is already in favorites"
+	ownAdvertisementMessage      = "Cannot add own advertisement to favorites"
+	emptyIDMessage               = "invalid UUID length: 0"
+)
 
 // TestSuite - набор тестов для функционала "Избранное"
 // Содержит двух пользователей: покупателя и продавца, а также фикстуру для управления объявлениями
@@ -63,7 +74,7 @@ func (s *TestSuite) TearDownSuite() {
 // createSellerAdvertisement создает объявление от имени продавца, после теста оно удалится в TearDownTest
 func (s *TestSuite) createSellerAdvertisement() advertisementModels.Advertisement {
 	base.Precondition("Продавец создает объявление")
-	return s.fixture.CreateAdvertisement(s.T(), s.seller.Token, advertisements.NewAdvertisementRequest())
+	return s.fixture.CreateAdvertisement(s.T(), s.seller.Token, advertisements.NewAdvertisementRequest(validPhotoPath))
 }
 
 // Positive: добавленное в избранное объявление появляется в списке, удалённое - пропадает
@@ -76,7 +87,7 @@ func (s *TestSuite) TestFavoritesFullCycle() {
 		favorite := favorites.AddToFavorites(s.T(), s.buyer.Token, ad.ID)
 
 		base.Check("В ответе вернулось именно это объявление")
-		require.Equal(s.T(), ad.ID, favorite.Advertisement.ID)
+		require.Equal(s.T(), ad.ID, favorite.Advertisement.ID, "В ответе на добавление в избранное вернулось другое объявление")
 	})
 
 	s.Run("Объявление появилось в списке избранного", func() {
@@ -134,7 +145,7 @@ func (s *TestSuite) TestAddNotExistingAdvertisement() {
 	errResponse := favorites.AddToFavoritesExpectError(s.T(), s.buyer.Token, notExistingID, http.StatusNotFound)
 
 	base.Check("Вернулся 404 и заполнены поля error и message")
-	assertions.AssertErrorResponse(s.T(), errResponse)
+	assertions.AssertErrorResponseEquals(s.T(), errResponse, assertions.NotFoundErrorCode, advertisementNotFoundMessage)
 }
 
 // Negative: удаление из избранного несуществующего объявления возвращает 404
@@ -145,7 +156,7 @@ func (s *TestSuite) TestRemoveNotExistingAdvertisement() {
 	errResponse := favorites.RemoveFromFavoritesExpectError(s.T(), s.buyer.Token, notExistingID, http.StatusNotFound)
 
 	base.Check("Вернулся 404 и заполнены поля error и message")
-	assertions.AssertErrorResponse(s.T(), errResponse)
+	assertions.AssertErrorResponseEquals(s.T(), errResponse, assertions.NotFoundErrorCode, favoriteNotFoundMessage)
 }
 
 // Negative: ручки избранного без токена или с неверным токеном возвращают 401
@@ -167,11 +178,12 @@ func (s *TestSuite) TestFavoritesUnauthorized() {
 		}},
 	}
 	tokens := []struct {
-		name  string
-		value string
+		name        string
+		value       string
+		wantMessage string
 	}{
-		{"без токена", ""},
-		{"неверный токен", incorrectToken},
+		{"без токена", "", assertions.MissingTokenMessage},
+		{"неверный токен", incorrectToken, assertions.InvalidTokenMessage},
 	}
 
 	for _, operation := range operations {
@@ -181,7 +193,7 @@ func (s *TestSuite) TestFavoritesUnauthorized() {
 				errResponse := operation.call(s.T(), token.value)
 
 				base.Check("Вернулся 401 и корректное сообщение об ошибке")
-				assertions.AssertUnauthorizedResponse(s.T(), errResponse)
+				assertions.AssertUnauthorizedResponse(s.T(), errResponse, token.wantMessage)
 			})
 		}
 	}
@@ -198,19 +210,19 @@ func (s *TestSuite) TestAddAlreadyFavoriteAdvertisement() {
 	errResponse := favorites.AddToFavoritesExpectError(s.T(), s.buyer.Token, ad.ID, http.StatusConflict)
 
 	base.Check("Вернулся 409 и заполнены поля error и message")
-	assertions.AssertErrorResponse(s.T(), errResponse)
+	assertions.AssertErrorResponseEquals(s.T(), errResponse, assertions.AlreadyExistsErrorCode, alreadyInFavoritesMessage)
 }
 
 // Negative: нельзя добавить в избранное собственное объявление (403)
 func (s *TestSuite) TestAddOwnAdvertisement() {
 	base.Precondition("Покупатель создает собственное объявление")
-	ownAd := s.fixture.CreateAdvertisement(s.T(), s.buyer.Token, advertisements.NewAdvertisementRequest())
+	ownAd := s.fixture.CreateAdvertisement(s.T(), s.buyer.Token, advertisements.NewAdvertisementRequest(validPhotoPath))
 
 	base.Step(fmt.Sprintf("Добавляем в избранное собственное объявление id=%s", ownAd.ID))
 	errResponse := favorites.AddToFavoritesExpectError(s.T(), s.buyer.Token, ownAd.ID, http.StatusForbidden)
 
 	base.Check("Вернулся 403 и заполнены поля error и message")
-	assertions.AssertErrorResponse(s.T(), errResponse)
+	assertions.AssertErrorResponseEquals(s.T(), errResponse, assertions.ForbiddenErrorCode, ownAdvertisementMessage)
 }
 
 // Negative: запрос на добавление в избранное с пустым advertisement_id возвращает 400
@@ -219,5 +231,5 @@ func (s *TestSuite) TestAddWithEmptyAdvertisementID() {
 	errResponse := favorites.AddToFavoritesExpectError(s.T(), s.buyer.Token, "", http.StatusBadRequest)
 
 	base.Check("Вернулся 400 и заполнены поля error и message")
-	assertions.AssertErrorResponse(s.T(), errResponse)
+	assertions.AssertErrorResponseEquals(s.T(), errResponse, assertions.InvalidRequestErrorCode, emptyIDMessage)
 }

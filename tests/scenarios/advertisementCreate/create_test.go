@@ -22,8 +22,26 @@ import (
 
 const (
 	maxTitleLength = 255
-	incorrectToken = "incorrect_token"
+	maxPhotosCount = 3
+
+	serverTitleLimit = 50
+	incorrectToken   = "incorrect_token"
+
+	validPhotoPath   = "photos/valid.png"
+	invalidPhotoPath = "photos/invalid.txt"
+
+	negativeQuantity = -1
 )
+
+// validPhotos возвращает пути к count валидным фотографиям (один и тот же файл прикладывается count раз)
+func validPhotos(count int) []string {
+	paths := make([]string, count)
+	for i := range paths {
+		paths[i] = validPhotoPath
+	}
+
+	return paths
+}
 
 // набор тестов для функционала создания объявлений.
 type TestSuite struct {
@@ -58,7 +76,7 @@ func (s *TestSuite) TearDownSuite() {
 // Positive: создаем объявление со всеми параметрами и проверяем GET по ID, поиск по названию и фотографии
 func (s *TestSuite) TestCreateAdvertisementPositive() {
 	token := s.loginData.Token
-	request := advertisements.NewAdvertisementRequest()
+	request := advertisements.NewAdvertisementRequest(validPhotos(maxPhotosCount)...)
 
 	var created advertisementModels.Advertisement
 	isCreated := s.Run("Создаем объявление со всеми параметрами и фотографией", func() {
@@ -66,7 +84,7 @@ func (s *TestSuite) TestCreateAdvertisementPositive() {
 		created = s.fixture.CreateAdvertisement(s.T(), token, request)
 
 		base.Check("Объявление создано и в ответе есть id")
-		require.NotEmpty(s.T(), created.ID)
+		require.NotEmptyf(s.T(), created.ID, "В ответе на создание объявления нет id, название: %s", request.Title)
 	})
 	if !isCreated {
 		return
@@ -93,9 +111,9 @@ func (s *TestSuite) TestCreateAdvertisementPositive() {
 		photos := advertisements.GetAdvertisementPhotos(s.T(), token, created.ID)
 
 		base.Check("Количество фотографий совпадает с загруженным и у каждой есть url")
-		require.Len(s.T(), photos, request.PhotosCount, "Количество фотографий не совпадает с загруженным")
+		require.Lenf(s.T(), photos, len(request.PhotoPaths), "Количество фотографий не совпадает с загруженным, объявление id=%s", created.ID)
 		for _, photo := range photos {
-			require.NotEmpty(s.T(), photo.URL, "У фотографии пустой url")
+			require.NotEmptyf(s.T(), photo.URL, "У фотографии id=%s пустой url", photo.ID)
 		}
 	})
 }
@@ -103,28 +121,42 @@ func (s *TestSuite) TestCreateAdvertisementPositive() {
 // Negative: некорректные параметры при создании объявления возвращают 400 и сообщение об ошибке
 func (s *TestSuite) TestCreateAdvertisementInvalidParams() {
 	cases := []struct {
-		name   string
-		modify func(r *advertisementModels.CreateAdvertisementRequest)
+		name        string
+		modify      func(r *advertisementModels.CreateAdvertisementRequest)
+		wantMessage string
 	}{
-		{"пустой title", func(r *advertisementModels.CreateAdvertisementRequest) { r.Title = "" }},
+		{"пустой title", func(r *advertisementModels.CreateAdvertisementRequest) { r.Title = "" }, "title is required"},
 		{"слишком длинный title", func(r *advertisementModels.CreateAdvertisementRequest) {
 			r.Title = strings.Repeat("a", maxTitleLength+1)
-		}},
-		{"отрицательная цена", func(r *advertisementModels.CreateAdvertisementRequest) { r.Price = -100 }},
-		{"пустое описание", func(r *advertisementModels.CreateAdvertisementRequest) { r.Description = "" }},
-		{"без фотографий", func(r *advertisementModels.CreateAdvertisementRequest) { r.PhotosCount = 0 }},
+		}, fmt.Sprintf("title must not exceed %d characters provided %d", serverTitleLimit, maxTitleLength+1)},
+		{"отрицательная цена", func(r *advertisementModels.CreateAdvertisementRequest) { r.Price = -100 },
+			"price must be between 0 and 1000000 inclusive"},
+		{"пустое описание", func(r *advertisementModels.CreateAdvertisementRequest) { r.Description = "" }, "description is required"},
+		{"без фотографий", func(r *advertisementModels.CreateAdvertisementRequest) { r.PhotoPaths = nil }, "at least 1 photo is required"},
+		{"отрицательное количество", func(r *advertisementModels.CreateAdvertisementRequest) { r.Quantity = negativeQuantity },
+			"quantity must be between 1 and 100 inclusive"},
+		{"строка вместо цены", func(r *advertisementModels.CreateAdvertisementRequest) { r.PriceRaw = "abc" },
+			"cannot convert string value abc to float"},
+		{"строка вместо количества", func(r *advertisementModels.CreateAdvertisementRequest) { r.QuantityRaw = "abc" },
+			"cannot convert string value to int"},
+		{"неподдерживаемый формат файла фотографии", func(r *advertisementModels.CreateAdvertisementRequest) {
+			r.PhotoPaths = []string{invalidPhotoPath}
+		}, `photo 1: file type not allowed: extension ".txt"`},
+		{"больше трёх фотографий", func(r *advertisementModels.CreateAdvertisementRequest) {
+			r.PhotoPaths = validPhotos(maxPhotosCount + 1)
+		}, fmt.Sprintf("maximum %d photos allowed", maxPhotosCount)},
 	}
 
 	for _, tc := range cases {
 		s.Run(tc.name, func() {
-			request := advertisements.NewAdvertisementRequest()
+			request := advertisements.NewAdvertisementRequest(validPhotos(1)...)
 			tc.modify(&request)
 
 			base.Step(fmt.Sprintf("Пытаемся создать объявление: %s", tc.name))
 			errResponse := advertisements.CreateAdvertisementExpectError(s.T(), s.loginData.Token, request, http.StatusBadRequest)
 
-			base.Check("Вернулся 400 и заполнены поля error и message")
-			assertions.AssertErrorResponse(s.T(), errResponse)
+			base.Check("Вернулся 400, error и message совпадают с ожидаемыми")
+			assertions.AssertErrorResponseEquals(s.T(), errResponse, assertions.InvalidRequestErrorCode, tc.wantMessage)
 		})
 	}
 }
@@ -132,11 +164,12 @@ func (s *TestSuite) TestCreateAdvertisementInvalidParams() {
 // Negative: запрос без авторизации или с неверным токеном возвращает 401 и сообщение об ошибке
 func (s *TestSuite) TestCreateAdvertisementUnauthorized() {
 	cases := []struct {
-		name  string
-		token string
+		name        string
+		token       string
+		wantMessage string
 	}{
-		{"без токена", ""},
-		{"неверный токен", incorrectToken},
+		{"без токена", "", assertions.MissingTokenMessage},
+		{"неверный токен", incorrectToken, assertions.InvalidTokenMessage},
 	}
 
 	for _, tc := range cases {
@@ -144,10 +177,10 @@ func (s *TestSuite) TestCreateAdvertisementUnauthorized() {
 			time.Sleep(300 * time.Millisecond)
 			base.Step(fmt.Sprintf("Пытаемся создать объявление: %s", tc.name))
 			errResponse := advertisements.CreateAdvertisementExpectError(s.T(), tc.token,
-				advertisements.NewAdvertisementRequest(), http.StatusUnauthorized)
+				advertisements.NewAdvertisementRequest(validPhotos(1)...), http.StatusUnauthorized)
 
 			base.Check("Вернулся 401 и корректное сообщение об ошибке")
-			assertions.AssertUnauthorizedResponse(s.T(), errResponse)
+			assertions.AssertUnauthorizedResponse(s.T(), errResponse, tc.wantMessage)
 		})
 	}
 }

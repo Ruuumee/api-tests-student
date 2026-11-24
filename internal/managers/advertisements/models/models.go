@@ -27,11 +27,15 @@ type AdvertisementsList struct {
 	Total      int             `json:"total"`
 }
 
-// CreateAdvertisementRequest параметры формы создания объявления
+// CreateAdvertisementRequest параметры формы создания объявления.
+// PriceRaw и QuantityRaw нужны для негативных тестов: если заполнены, в форму уходят они вместо Price и Quantity
+// (например, строка вместо числа). PhotoPaths - пути к файлам фотографий относительно папки с тестом
 type CreateAdvertisementRequest struct {
 	Title       string
 	Description string
 	Price       float64
 	Quantity    int
-	PhotosCount int
+	PriceRaw    string
+	QuantityRaw string
+	PhotoPaths  []string
 }

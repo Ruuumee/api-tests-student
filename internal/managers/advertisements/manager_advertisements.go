@@ -18,19 +18,19 @@ const (
 	DefaultDescription = "Объявление про что-то и то-то"
 	DefaultPrice       = 1730.29
 	DefaultQuantity    = 3
-	DefaultPhotosCount = 1
 	titlePrefix        = "AutotestAvito_QA-"
 	titleRandomLength  = 10
 )
 
-// NewAdvertisementRequest возвращает корректный запрос на создание объявления со всеми параметрами и уникальным названием
-func NewAdvertisementRequest() models.CreateAdvertisementRequest {
+// NewAdvertisementRequest возвращает корректный запрос на создание объявления со всеми параметрами и уникальным названием.
+// Файлы фотографий передаются путями относительно папки с тестом
+func NewAdvertisementRequest(photoPaths ...string) models.CreateAdvertisementRequest {
 	return models.CreateAdvertisementRequest{
 		Title:       titlePrefix + utils.RandomString(titleRandomLength),
 		Description: DefaultDescription,
 		Price:       DefaultPrice,
 		Quantity:    DefaultQuantity,
-		PhotosCount: DefaultPhotosCount,
+		PhotoPaths:  photoPaths,
 	}
 }
 
@@ -40,7 +40,7 @@ func GetAdvertisementsList(t *testing.T, token, text string) models.Advertisemen
 	defer raw.Body.Close()
 
 	body, err := io.ReadAll(raw.Body)
-	require.NoError(t, err)
+	require.NoError(t, err, "Не удалось прочитать тело ответа на поиск объявлений")
 
 	return response.ParseJSON[models.AdvertisementsList](t, body)
 }

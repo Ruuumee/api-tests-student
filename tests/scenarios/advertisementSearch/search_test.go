@@ -19,7 +19,11 @@ import (
 	base "api-tests-template/tests"
 )
 
-const partLength = 5
+const (
+	partLength = 5
+	// файл лежит в папке photos рядом с тестом
+	validPhotoPath = "photos/valid.png"
+)
 
 // TestSuite - набор тестов для функционала поиска объявлений по названию.
 type TestSuite struct {
@@ -50,7 +54,7 @@ func (s *TestSuite) SetupSuite() {
 	s.searchMiddle = utils.RandomString(partLength)
 	s.searchEnd = utils.RandomString(partLength)
 
-	request := advertisements.NewAdvertisementRequest()
+	request := advertisements.NewAdvertisementRequest(validPhotoPath)
 	request.Title = s.searchBeginning + s.searchMiddle + s.searchEnd
 	s.existingAdTitle = s.fixture.CreateAdvertisement(s.T(), s.loginData.Token, request).Title
 	require.NotEmpty(s.T(), s.existingAdTitle, "Название созданного объявления пустое")
@@ -68,7 +72,7 @@ func (s *TestSuite) TestSearchByTitle() {
 	list := advertisements.GetAdvertisementsList(s.T(), s.loginData.Token, s.searchMiddle)
 
 	s.Run("В ответе есть хотя бы одно объявление", func() {
-		require.NotEmpty(s.T(), list.Items)
+		require.NotEmptyf(s.T(), list.Items, "Поиск по подстроке %s ничего не вернул", s.searchMiddle)
 	})
 
 	s.Run("Среди найденных есть наше объявление", func() {

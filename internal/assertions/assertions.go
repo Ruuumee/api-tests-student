@@ -1,6 +1,7 @@
 package assertions
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -8,12 +9,25 @@ import (
 	"api-tests-template/internal/helpers/response"
 	"api-tests-template/internal/managers/advertisements/models"
 	favoriteModels "api-tests-template/internal/managers/favorites/models"
+	"api-tests-template/internal/utils"
 )
 
 const (
 	// UnauthorizedErrorCode значение поля error в ответе 401
 	UnauthorizedErrorCode = "unauthorized"
-	priceDelta            = 0.001
+	// MissingTokenMessage значение поля message в ответе 401, если токен не передан
+	MissingTokenMessage = "Authorization header required"
+	// InvalidTokenMessage значение поля message в ответе 401, если токен неверный
+	InvalidTokenMessage = "Invalid or expired token"
+	// InvalidRequestErrorCode значение поля error в ответе 400
+	InvalidRequestErrorCode = "invalid_request"
+	// NotFoundErrorCode значение поля error в ответе 404
+	NotFoundErrorCode = "not_found"
+	// ForbiddenErrorCode значение поля error в ответе 403
+	ForbiddenErrorCode = "forbidden"
+	// AlreadyExistsErrorCode значение поля error в ответе 409
+	AlreadyExistsErrorCode = "already_exists"
+	priceDelta             = 0.001
 )
 
 // ContainsAdvertisementByTitle проверяет, что в списке есть объявление с указанным названием
@@ -37,14 +51,21 @@ func AdvertisementMatchesRequest(t *testing.T, ad models.Advertisement, request 
 
 // в ответе с ошибкой заполнены поля error и message?
 func AssertErrorResponse(t *testing.T, resp response.ErrorResponse) {
+	utils.LogWithLabelAndTimeStamp("Response", fmt.Sprintf("error=%q, message=%q", resp.Error, resp.Message))
 	require.NotEmpty(t, resp.Error, "В ответе с ошибкой не заполнено поле error")
 	require.NotEmpty(t, resp.Message, "В ответе с ошибкой не заполнено поле message")
 }
 
-// проверяет тело ответа 401: заполнены error и message, error = unauthorized
-func AssertUnauthorizedResponse(t *testing.T, resp response.ErrorResponse) {
+// проверяет, что в ответе с ошибкой error и message равны ожидаемым
+func AssertErrorResponseEquals(t *testing.T, resp response.ErrorResponse, wantError, wantMessage string) {
 	AssertErrorResponse(t, resp)
-	require.Equal(t, UnauthorizedErrorCode, resp.Error, "Некорректное значение error параметра")
+	require.Equalf(t, wantError, resp.Error, "Некорректное значение error: ожидали %q, получили %q", wantError, resp.Error)
+	require.Equalf(t, wantMessage, resp.Message, "Некорректное значение message: ожидали %q, получили %q", wantMessage, resp.Message)
+}
+
+// проверяет тело ответа 401: error = unauthorized, message равен ожидаемому
+func AssertUnauthorizedResponse(t *testing.T, resp response.ErrorResponse, wantMessage string) {
+	AssertErrorResponseEquals(t, resp, UnauthorizedErrorCode, wantMessage)
 }
 
 // объявление есть в списке избранного

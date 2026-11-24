@@ -3,9 +3,12 @@ package advertisements
 import (
 	"bytes"
 	"fmt"
+	"mime"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
+	"os"
+	"path/filepath"
 	"strconv"
 	"testing"
 
@@ -14,7 +17,6 @@ import (
 	"api-tests-template/internal/constants/path"
 	apiRunner "api-tests-template/internal/helpers/api-runner"
 	"api-tests-template/internal/managers/advertisements/models"
-	"api-tests-template/internal/utils"
 )
 
 // GET-запрос поиска объявлений по вхождению текста в название
@@ -70,25 +72,42 @@ func buildCreateAdvertisementForm(t *testing.T, request models.CreateAdvertiseme
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
+	price := strconv.FormatFloat(request.Price, 'f', 2, 64)
+	if request.PriceRaw != "" {
+		price = request.PriceRaw
+	}
+	quantity := strconv.Itoa(request.Quantity)
+	if request.QuantityRaw != "" {
+		quantity = request.QuantityRaw
+	}
+
 	fields := map[string]string{
 		"title":       request.Title,
 		"description": request.Description,
-		"price":       strconv.FormatFloat(request.Price, 'f', 2, 64),
-		"quantity":    strconv.Itoa(request.Quantity),
+		"price":       price,
+		"quantity":    quantity,
 	}
 	for name, value := range fields {
 		require.NoErrorf(t, writer.WriteField(name, value), "Не удалось записать поле формы %s", name)
 	}
 
-	for i := range request.PhotosCount {
+	for _, photoPath := range request.PhotoPaths {
+		content, err := os.ReadFile(filepath.Clean(photoPath))
+		require.NoErrorf(t, err, "Не удалось прочитать файл фотографии %s", photoPath)
+
+		contentType := mime.TypeByExtension(filepath.Ext(photoPath))
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+
 		header := textproto.MIMEHeader{}
-		header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="photos"; filename="photo%d.png"`, i+1))
-		header.Set("Content-Type", "image/png")
+		header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="photos"; filename="%s"`, filepath.Base(photoPath)))
+		header.Set("Content-Type", contentType)
 
 		part, err := writer.CreatePart(header)
-		require.NoError(t, err, "Не удалось создать часть формы для фотографии")
-		_, err = part.Write(utils.GeneratePNG())
-		require.NoError(t, err, "Не удалось записать фотографию в форму")
+		require.NoErrorf(t, err, "Не удалось создать часть формы для фотографии %s", photoPath)
+		_, err = part.Write(content)
+		require.NoErrorf(t, err, "Не удалось записать фотографию %s в форму", photoPath)
 	}
 
 	require.NoError(t, writer.Close(), "Не удалось закрыть multipart-форму")

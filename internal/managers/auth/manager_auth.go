@@ -35,11 +35,11 @@ func Login(t *testing.T, username, password string) models.LoginOkResponse {
 	defer loginRawResponse.Body.Close()
 
 	respArray, errResponse := io.ReadAll(loginRawResponse.Body)
-	require.NoError(t, errResponse)
+	require.NoError(t, errResponse, "Не удалось прочитать тело ответа на авторизацию")
 
 	loginResponse := models.LoginOkResponse{}
 	err := json.Unmarshal(respArray, &loginResponse)
-	require.NoError(t, err)
+	require.NoErrorf(t, err, "Не удалось разобрать ответ на авторизацию: %s", string(respArray))
 
 	return loginResponse
 }

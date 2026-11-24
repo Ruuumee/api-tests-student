@@ -12,3 +12,5 @@
 
 # Go workspace files
 .env.override
+
+*.tar.gz
